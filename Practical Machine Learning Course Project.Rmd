@@ -1,0 +1,87 @@
+#Predicting Weight Lifting Exercise
+###Author: Michael Shay
+
+
+```{r, echo = FALSE, results = "hide", message = FALSE, warning=FALSE}
+options(scipen = 1, digits = 2)
+library(caret)
+library(randomForest)
+```
+
+One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, the goal will be to use data from accelerometers on the belt, forearm, arm, and dumbbell of 6 participants to predict if the barbell lift was done correctly.
+
+###Load the Dataset
+```{r, cache = TRUE, results = "hide"}
+urlTraining <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+download.file(urlTraining, destfile = "./pml-training.csv")
+training <- read.csv("./pml-training.csv")
+
+urlValidation <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(urlValidation, destfile = "./pml-testing.csv")
+validation <- read.csv("./pml-testing.csv")
+```
+
+###Preprocessing
+First we create our testing and training datasets from the original testing file.
+```{r, cache = TRUE, results = "hide"}
+set.seed(12416)
+
+#Split training dataset into training and testing datasets
+inTrain <- createDataPartition(y=training$classe, p=0.75, list=FALSE)
+testing <- training[-inTrain,]
+training <- training[inTrain,]
+```
+
+Next we remove non-measurement variables and zero- and near zero-variance predictors.
+```{r, cache = TRUE}
+#Remove Non-Measurement variables
+training <- training[,-c(1:7)]
+
+#Remove Zero- and Near Zero-Variance Predictors
+nzv <- nearZeroVar(training)
+training <- training[, -nzv]
+```
+
+Looking at the summary of the remaining predictors, there are a subset of predictors where less than 5% of the total observations have values. Normally, imputing the missing values would be encouraged in order to keep features that may be important, but since so many observations are NA, these features are better left out.
+
+```{r, cache = TRUE}
+summary(training[1:10])
+
+#Only include features where at least 95% of the data is not missing
+training <- training[,apply(training,2,function(x){1-sum(is.na(x))/length(x)}) >= 0.05]
+
+```
+
+Next we make the same changes to our testing and validation datasets.
+```{r, cache = TRUE}
+testing <- testing[,-c(1:7)]
+testing <- testing[, -nzv]
+testing <- testing[,apply(testing,2,function(x){1-sum(is.na(x))/length(x)}) >= 0.05]
+
+validation <- validation[,-c(1:7)]
+validation <- validation[, -nzv]
+validation <- validation[,apply(validation,2,function(x){1-sum(is.na(x))/length(x)}) >= 0.05]
+```
+
+###Prediction Model
+First we will try to build the model with boosting with trees.
+```{r, cache = TRUE, message = FALSE}
+modfit <- train(classe ~ ., method="gbm", data=training, verbose = FALSE)
+pred <- predict(modfit,testing)
+confusionMatrix(testing$classe,pred)
+```
+
+The model has `r 100*confusionMatrix(testing$classe,pred)$overall[1]`% accuracy on the testing set and an expected out-of-sample error rate of `r 100 - 100*confusionMatrix(testing$classe,pred)$overall[1]`%.
+
+Next we choose to use the random forest algorithm to build our training model due to its high accuracy and use cross-validation in order to help build the model by detecting relevant features.
+
+```{r, cache = TRUE, message = FALSE}
+modfit <- train(classe ~ ., method="rf", data=training, trControl=trainControl(method="cv", number=3))
+pred <- predict(modfit,testing)
+confusionMatrix(testing$classe,pred)
+```
+
+The model has `r 100*confusionMatrix(testing$classe,pred)$overall[1]`% accuracy on the testing set and an expected out-of-sample error rate of `r 100 - 100*confusionMatrix(testing$classe,pred)$overall[1]`%. Since the accuracy is higher, we will ultimately use the model created from the random forest algorithm with cross-validation.
+
+###Credits
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
