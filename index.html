@@ -180,53 +180,87 @@ training &lt;- training[, -nzv]</code></pre>
 training &lt;- training[,apply(training,2,function(x){1-sum(is.na(x))/length(x)}) &gt;= 0.05]</code></pre>
 <p>Next we make the same changes to our testing and validation datasets.</p>
 <pre class="r"><code>testing &lt;- testing[,-c(1:7)]
-nzv &lt;- nearZeroVar(testing)
 testing &lt;- testing[, -nzv]
 testing &lt;- testing[,apply(testing,2,function(x){1-sum(is.na(x))/length(x)}) &gt;= 0.05]
 
 validation &lt;- validation[,-c(1:7)]
-nzv &lt;- nearZeroVar(validation)
 validation &lt;- validation[, -nzv]
 validation &lt;- validation[,apply(validation,2,function(x){1-sum(is.na(x))/length(x)}) &gt;= 0.05]</code></pre>
 </div>
 <div id="prediction-model" class="section level3">
 <h3>Prediction Model</h3>
-<p>We choose to use the random forest algorithm to build our training model due to its high accuracy and use cross-validation in order to help build the model by detecting relevant features.</p>
-<pre class="r"><code>modfit &lt;- train(classe ~ ., method=&quot;rf&quot;, data=training, trControl=trainControl(method=&quot;cv&quot;, number=3))
-pred &lt;- predict(modfit,testing)
-confusionMatrix(testing$classe,pred)</code></pre>
+<p>First we will try to build the model with boosting with trees.</p>
+<pre class="r"><code>modfitBoost &lt;- train(classe ~ ., method=&quot;gbm&quot;, data=training, verbose = FALSE, trControl=trainControl(method=&quot;cv&quot;, number=3))
+predBoost &lt;- predict(modfitBoost,testing)
+confusionMatrix(testing$classe,predBoost)</code></pre>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##           Reference
 ## Prediction    A    B    C    D    E
-##          A 1393    0    2    0    0
-##          B    7  941    1    0    0
-##          C    0    5  849    1    0
-##          D    0    0    3  801    0
-##          E    0    0    0    2  899
+##          A 1383    5    6    1    0
+##          B   33  890   25    1    0
+##          C    0   21  823   10    1
+##          D    0    0   21  777    6
+##          E    0    9    2    9  881
 ## 
 ## Overall Statistics
 ##                                         
-##                Accuracy : 0.996         
-##                  95% CI : (0.993, 0.997)
-##     No Information Rate : 0.285         
+##                Accuracy : 0.969         
+##                  95% CI : (0.964, 0.974)
+##     No Information Rate : 0.289         
 ##     P-Value [Acc &gt; NIR] : &lt;2e-16        
 ##                                         
-##                   Kappa : 0.995         
+##                   Kappa : 0.961         
 ##  Mcnemar's Test P-Value : NA            
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity             0.995    0.995    0.993    0.996    1.000
-## Specificity             0.999    0.998    0.999    0.999    1.000
-## Pos Pred Value          0.999    0.992    0.993    0.996    0.998
-## Neg Pred Value          0.998    0.999    0.999    0.999    1.000
-## Prevalence              0.285    0.193    0.174    0.164    0.183
-## Detection Rate          0.284    0.192    0.173    0.163    0.183
+## Sensitivity             0.977    0.962    0.938    0.974    0.992
+## Specificity             0.997    0.985    0.992    0.993    0.995
+## Pos Pred Value          0.991    0.938    0.963    0.966    0.978
+## Neg Pred Value          0.991    0.991    0.987    0.995    0.998
+## Prevalence              0.289    0.189    0.179    0.163    0.181
+## Detection Rate          0.282    0.181    0.168    0.158    0.180
 ## Detection Prevalence    0.284    0.194    0.174    0.164    0.184
-## Balanced Accuracy       0.997    0.996    0.996    0.998    1.000</code></pre>
-<p>The model has 99.57% accuracy on the testing set and an expected out-of-sample error rate of 0.43%.</p>
+## Balanced Accuracy       0.987    0.974    0.965    0.984    0.994</code></pre>
+<p>The model has 96.94% accuracy on the testing set and an expected out-of-sample error rate of 3.06%.</p>
+<p>Next we choose to use the random forest algorithm to build our training model due to its high accuracy and use cross-validation in order to help build the model by detecting relevant features.</p>
+<pre class="r"><code>modfitRF &lt;- train(classe ~ ., method=&quot;rf&quot;, data=training, trControl=trainControl(method=&quot;cv&quot;, number=3))
+predRF &lt;- predict(modfitRF,testing)
+confusionMatrix(testing$classe,predRF)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 1395    0    0    0    0
+##          B    7  941    1    0    0
+##          C    0    7  847    1    0
+##          D    0    0   16  788    0
+##          E    0    0    0    1  900
+## 
+## Overall Statistics
+##                                         
+##                Accuracy : 0.993         
+##                  95% CI : (0.991, 0.995)
+##     No Information Rate : 0.286         
+##     P-Value [Acc &gt; NIR] : &lt;2e-16        
+##                                         
+##                   Kappa : 0.991         
+##  Mcnemar's Test P-Value : NA            
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity             0.995    0.993    0.980    0.997    1.000
+## Specificity             1.000    0.998    0.998    0.996    1.000
+## Pos Pred Value          1.000    0.992    0.991    0.980    0.999
+## Neg Pred Value          0.998    0.998    0.996    1.000    1.000
+## Prevalence              0.286    0.193    0.176    0.161    0.184
+## Detection Rate          0.284    0.192    0.173    0.161    0.184
+## Detection Prevalence    0.284    0.194    0.174    0.164    0.184
+## Balanced Accuracy       0.998    0.995    0.989    0.997    1.000</code></pre>
+<p>The model has 99.33% accuracy on the testing set and an expected out-of-sample error rate of 0.67%. Since the accuracy is higher, we will ultimately use the model created from the random forest algorithm with cross-validation.</p>
 </div>
 <div id="credits" class="section level3">
 <h3>Credits</h3>
