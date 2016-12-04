@@ -65,23 +65,23 @@ validation <- validation[,apply(validation,2,function(x){1-sum(is.na(x))/length(
 
 ###Prediction Model
 First we will try to build the model with boosting with trees.
-```{r, cache = TRUE, message = FALSE}
-modfit <- train(classe ~ ., method="gbm", data=training, verbose = FALSE)
-pred <- predict(modfit,testing)
-confusionMatrix(testing$classe,pred)
+```{r, cache = TRUE, message = FALSE, warning=FALSE}
+modfitBoost <- train(classe ~ ., method="gbm", data=training, verbose = FALSE, trControl=trainControl(method="cv", number=3))
+predBoost <- predict(modfitBoost,testing)
+confusionMatrix(testing$classe,predBoost)
 ```
 
-The model has `r 100*confusionMatrix(testing$classe,pred)$overall[1]`% accuracy on the testing set and an expected out-of-sample error rate of `r 100 - 100*confusionMatrix(testing$classe,pred)$overall[1]`%.
+The model has `r 100*confusionMatrix(testing$classe,predBoost)$overall[1]`% accuracy on the testing set and an expected out-of-sample error rate of `r 100 - 100*confusionMatrix(testing$classe,predBoost)$overall[1]`%.
 
 Next we choose to use the random forest algorithm to build our training model due to its high accuracy and use cross-validation in order to help build the model by detecting relevant features.
 
 ```{r, cache = TRUE, message = FALSE}
-modfit <- train(classe ~ ., method="rf", data=training, trControl=trainControl(method="cv", number=3))
-pred <- predict(modfit,testing)
-confusionMatrix(testing$classe,pred)
+modfitRF <- train(classe ~ ., method="rf", data=training, trControl=trainControl(method="cv", number=3))
+predRF <- predict(modfitRF,testing)
+confusionMatrix(testing$classe,predRF)
 ```
 
-The model has `r 100*confusionMatrix(testing$classe,pred)$overall[1]`% accuracy on the testing set and an expected out-of-sample error rate of `r 100 - 100*confusionMatrix(testing$classe,pred)$overall[1]`%. Since the accuracy is higher, we will ultimately use the model created from the random forest algorithm with cross-validation.
+The model has `r 100*confusionMatrix(testing$classe,predRF)$overall[1]`% accuracy on the testing set and an expected out-of-sample error rate of `r 100 - 100*confusionMatrix(testing$classe,predRF)$overall[1]`%. Since the accuracy is higher, we will ultimately use the model created from the random forest algorithm with cross-validation.
 
 ###Credits
 Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
